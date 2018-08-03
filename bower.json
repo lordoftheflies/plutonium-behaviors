@@ -1,6 +1,7 @@
 {
   "name": "plutonium-behaviors",
   "description": "Common behaviors for Plutonium library.",
+  "version": "0.0.1",
   "main": "plutonium-behaviors.html",
   "dependencies": {
     "polymer": "Polymer/polymer#^2.0.0"
