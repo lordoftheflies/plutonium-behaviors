@@ -1,0 +1,157 @@
+<link rel="import" href="../polymer/lib/utils/mixin.html">
+
+<script type="text/javascript">
+
+    if (!window.Plutonium) {
+        window.Plutonium = {};
+    }
+
+    /**
+     * Mixin for handle user feedbacks.
+     *
+     * @mixinFunction
+     * @polymer
+     * @memberof Plutonium
+     */
+    Plutonium.NotificationMixin = Polymer.dedupingMixin((superClass) => class extends superClass {
+
+        notify(message) {
+            let feedback = {
+                level: 'notification',
+                message: message
+            };
+            this.feedback(feedback);
+        }
+
+        warning(message) {
+            this.feedback({
+                level: 'warning',
+                message: message
+            });
+        }
+
+        success(message) {
+            this.feedback({
+                level: 'success',
+                message: message
+            });
+        }
+
+        error(message) {
+            this.feedback({
+                level: 'error',
+                message: message
+            });
+        }
+    });
+
+    /**
+     * Mixin for produce user feedback.
+     *
+     * @mixinFunction
+     * @polymer
+     * @appliesMixin Plutonium.NotificationMixin
+     * @memberof Plutonium
+     */
+    Plutonium.NotificationProducerMixin = Polymer.dedupingMixin((superClass) => class extends Plutonium.NotificationMixin(superClass) {
+
+        feedback(notification) {
+            console.debug('Send notification event', notification);
+            this.dispatchEvent(new CustomEvent('plutonium-notification', {
+                bubbles: true,
+                composed: true,
+                detail: notification
+            }));
+
+        }
+
+    });
+
+    /**
+     * Mixin for display feedback.
+     *
+     * @mixinFunction
+     * @polymer
+     * @appliesMixin Plutonium.NotificationMixin
+     * @memberof Plutonium
+     */
+    Plutonium.NotificationConsumerMixin = Polymer.dedupingMixin((superClass) => class extends Plutonium.NotificationMixin(superClass) {
+
+        ready() {
+            super.ready();
+            this.addEventListener('plutonium-notification', e => this.handleNotification(e));
+        }
+
+        static get properties() {
+            return {
+                notifications: {
+                    type: Array,
+                    notify: true,
+                    value: () => []
+                },
+                notificationIcon: {
+                    type: String,
+                    notify: true,
+                    reflectToAttribute: true,
+                    value: () => 'my-icons:notifications'
+                }
+            };
+        }
+
+        static get observers() {
+            return [
+                'observeNotificationsLenght(notifications.lenght)'
+            ];
+        }
+
+        feedback(notification) {
+            console.debug('Add notification', notification);
+            this.push('notifications', notification);
+        }
+
+        observeNotificationsLenght(notificationsLenght) {
+            this.set('notificationIcon', notificationsLenght > 0 ? 'my-icons:notifications' : 'my-icons:notifications-off');
+        }
+
+        removeNotification(notifications) {
+            let index = this.notifications.indexOf(notifications);
+            this.splice('notifications', index, 1);
+        }
+
+        clear() {
+            let size = this.notifications.length;
+            this.splice('notifications', 0, size);
+            this.$.mainToast.close();
+        }
+
+        hideToast() {
+            this.$.mainToast.close();
+            this.observeNotificationsLenght(this.notifications.length);
+        }
+
+        showToast() {
+            if (this.notifications.length > 0) {
+
+                this.$.mainToast.toggle();
+                if (this.$.mainToast.opened) {
+                    this.set('notificationIcon', 'my-icons:notifications-none');
+                } else {
+                    this.set('notificationIcon', 'my-icons:notifications');
+                }
+
+            }
+        }
+
+        handleNotification(event) {
+            this.feedback(event.detail);
+            this.set('notificationIcon', 'my-icons:notifications-none');
+            this.$.mainToast.open();
+        }
+
+        handleApproveNotification(event) {
+            console.debug(event.detail);
+            this.splice('notifications', event.model.index, 1);
+        }
+
+    });
+</script>

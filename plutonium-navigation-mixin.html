@@ -1,0 +1,108 @@
+<link rel="import" href="../polymer/lib/utils/mixin.html">
+
+<script type="text/javascript">
+
+    if (!window.Plutonium) {
+        window.Plutonium = {};
+    }
+
+    /**
+     * Mixin for navigation in the application.
+     *
+     * @mixinFunction
+     * @polymer
+     * @memberof Plutonium
+     */
+    Plutonium.NavigationMixin = Polymer.dedupingMixin((superClass) => class extends superClass {
+
+        navigateBack() {
+            window.history.back();
+            window.dispatchEvent(new CustomEvent('location-changed'));
+        }
+
+        navigateTo(path, queryParams) {
+            window.history.pushState(queryParams, null, path);
+            window.dispatchEvent(new CustomEvent('location-changed'));
+        }
+    });
+
+    /**
+     * Mixin for navigation provider element.
+     *
+     * @mixinFunction
+     * @polymer
+     * @appliesMixin Plutonium.NavigationMixin
+     * @memberof Plutonium
+     */
+    Plutonium.NavigationHostMixin = Polymer.dedupingMixin((superClass) => class extends Plutonium.NavigationMixin(superClass) {
+
+        static get properties() {
+            return {
+                homePage: {
+                    type: String,
+                    value: 'view1'
+                },
+
+                _page: {
+                    type: String,
+                    reflectToAttribute: true,
+                    observer: '_pageChanged',
+                },
+                _routeData: Object,
+                _subroute: Object,
+                // This shouldn't be neccessary, but the Analyzer isn't picking up
+                // Polymer.Element#rootPath
+                rootPath: String,
+
+                pagePrefix: {
+                    type: String,
+                    value: 'my'
+                }
+            };
+        }
+
+        static get observers() {
+            return [
+                '_routePageChanged(_routeData.page)',
+            ];
+        }
+
+        ready() {
+            super.ready();
+            this.addEventListener('plutonium-navigation-changed', function (event) {
+                console.debug('Navigate to', event.detail);
+                self.set('_routeData.page', event.detail.path);
+                window.dispatchEvent(new CustomEvent('location-changed'));
+                // self.dispatchEvent(new CustomEvent('my-navigation-changed'));
+            });
+        }
+
+        _routePageChanged(page) {
+            // If no page was found in the route data, page will be an empty string.
+            // Default to 'view1' in that case.
+            this._page = page || this.get('homePage');
+
+            // Close a non-persistent drawer when the page & route are changed.
+            if (!this.$.drawer.persistent) {
+                this.$.drawer.close();
+            }
+        }
+
+        _pageChanged(page) {
+            // Load page import on demand. Show 404 page if fails
+            const resolvedPageUrl = this.resolveUrl(this.get('pagePrefix') + '-' + page + '.html');
+            Polymer.importHref(
+                resolvedPageUrl,
+                null,
+                this._showPage404.bind(this),
+                true);
+        }
+
+        _showPage404() {
+            this._page = 'view404';
+        }
+
+    });
+
+
+</script>

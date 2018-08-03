@@ -1,0 +1,83 @@
+<link rel="import" href="../polymer/lib/utils/mixin.html">
+
+<script type="text/javascript">
+
+    if (!window.Plutonium) {
+        window.Plutonium = {};
+    }
+
+    /**
+     * Mixin add authorization for secured and public access for public pages.
+     *
+     * @mixinFunction
+     * @polymer
+     * @memberof Plutonium
+     */
+    Plutonium.SecurityMixin = Polymer.dedupingMixin((superClass) => class extends superClass {
+
+        static get properties() {
+            return {
+                authenticated: {
+                    type: Boolean,
+                    notify: true
+                },
+                storedUser: {
+                    type: Object,
+                    notify: true
+                }
+            };
+        }
+
+        static get observers() {
+            return [
+                '_authenticationChanged(authenticated)',
+            ];
+        }
+
+        ready() {
+            super.ready();
+            let self = this;
+            this.addEventListener('plutonium-authentication-changed', function (event) {
+                self.$.auth.fetchUserInfo();
+            });
+            this.addEventListener('plutonium-signout', this.logOut);
+        }
+
+        handleUserResponse(event) {
+            var response = JSON.parse(event.detail.response);
+            this.storedUser = response;
+            console.debug('handle user response:', this.storedUser);
+            // if (response.id_token) {
+            //     this.error = '';
+            //     this.storedUser = {
+            //         name: this.formData.username,
+            //         id_token: response.id_token,
+            //         access_token: response.access_token,
+            //         loggedin: true,
+            //
+            //     };
+            // }
+
+            // reset form data
+            // this.formData = {};
+        }
+
+        handleUserError(event) {
+            this.error = event.detail.request.xhr.response;
+        }
+
+        _authenticationChanged(authenticated) {
+            this.$.publicLayout.resetLayout();
+            this.$.secureLayout.resetLayout();
+        }
+
+        logOut(event) {
+            console.debug('Logout');
+            this.set('_routeData.page', 'login');
+            this.$.auth.logOut(event);
+
+        }
+    });
+
+
+</script>
